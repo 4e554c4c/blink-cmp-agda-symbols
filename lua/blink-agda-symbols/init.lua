@@ -1,6 +1,14 @@
 --- @module 'blink.cmp'
+
+--- @class agda-symbols.Options
+--- @field extra table<string, string>
+local defaults = {
+  extra  = {},
+}
+
 --- @class agda-symbols.Source : blink.cmp.Source
 --- @field symbols blink.cmp.CompletionItem[]
+--- @field opts agda-symbols.Options
 local source = {}
 
 local function compute_symbols(symbols)
@@ -44,11 +52,19 @@ end
 -- You may also accept a second argument `config`, to get the full
 -- `sources.providers.your_provider` table
 function source.new(opts)
-  -- TODO use vim.validate when it is stabilized
-  local symbols = require "blink-agda-symbols.symbols"
+  -- TODO use vim.validate for opts when it is stabilized
   local self = setmetatable({}, { __index = source })
+
+  local pluginPath = debug.getinfo(1,"S").source:match("^@(.-)/lua/blink%-agda%-symbols/init.lua")
+  assert(pluginPath, "Unable to find location of current lua file")
+  local symbolsPath = pluginPath .. '/agda-symbols/symbols.json'
+  local f = assert(io.open(symbolsPath))
+  local symbolsJson = f:read '*all'
+  f:close()
+  local symbols = vim.json.decode(symbolsJson, {luanil={object=true, array=true}})
+
   self.opts = opts
-  symbols = vim.tbl_extend('force', symbols, opts.exta or {});
+  symbols = vim.tbl_extend('force', symbols, opts.extra or {});
   self.symbols = compute_symbols(symbols)
   return self
 end
