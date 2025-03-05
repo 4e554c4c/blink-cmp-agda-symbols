@@ -1,7 +1,7 @@
 --- @module 'blink.cmp'
 
 --- @class agda-symbols.Options
---- @field extra table<string, string>
+--- @field extra table<string, string | string[]>
 local defaults = {
   extra  = {},
 }
@@ -13,38 +13,43 @@ local source = {}
 
 local function compute_symbols(symbols)
   local computed = {}
-  for completion, symbol in pairs(symbols) do
+  for completion, associated_symbols in pairs(symbols) do
     local prefix_completion = [[\]] .. completion
-    local item = {
-      -- Label of the item in the UI
-      label = prefix_completion .. ' ' .. symbol,
-      -- (Optional) Item kind, where `Function` and `Method` will receive
-      -- auto brackets automatically
-      kind = require('blink.cmp.types').CompletionItemKind.Snippet,
+    if type(associated_symbols) ~= "table" then
+      associated_symbols = {associated_symbols}
+    end
+    for _ , symbol in ipairs(associated_symbols) do
+      local item = {
+        -- Label of the item in the UI
+        label = prefix_completion .. ' ' .. symbol,
+        -- (Optional) Item kind, where `Function` and `Method` will receive
+        -- auto brackets automatically
+        kind = require('blink.cmp.types').CompletionItemKind.Snippet,
 
-      -- (Optional) Text to fuzzy match against
-      filterText = prefix_completion,
-      -- (Optional) Text to use for sorting. You may use a layout like
-      -- 'aaaa', 'aaab', 'aaac', ... to control the order of the items
-      sortText = prefix_completion,
+        -- (Optional) Text to fuzzy match against
+        filterText = prefix_completion,
+        -- (Optional) Text to use for sorting. You may use a layout like
+        -- 'aaaa', 'aaab', 'aaac', ... to control the order of the items
+        sortText = prefix_completion,
 
-      -- Text to be inserted when accepting the item:
-      --
-      -- we use dummy completion text for proper "ghost" text until resolution
-      textEdit = {
-        newText = prefix_completion,
-      },
-      --]]
-      -- Or get blink.cmp to guess the range to replace for you. Use this only
-      -- when inserting *exclusively* alphanumeric characters. Any symbols will
-      -- trigger complicated guessing logic in blink.cmp that may not give the
-      -- result you're expecting
-      -- Note that blink.cmp will use `label` when omitting both `insertText` and `textEdit`
-      insertText = symbol,
-      -- May be Snippet or PlainText
-      insertTextFormat = vim.lsp.protocol.InsertTextFormat.PlainText,
-    }
-    table.insert(computed, item)
+        -- Text to be inserted when accepting the item:
+        --
+        -- we use dummy completion text for proper "ghost" text until resolution
+        textEdit = {
+          newText = prefix_completion,
+        },
+        --]]
+        -- Or get blink.cmp to guess the range to replace for you. Use this only
+        -- when inserting *exclusively* alphanumeric characters. Any symbols will
+        -- trigger complicated guessing logic in blink.cmp that may not give the
+        -- result you're expecting
+        -- Note that blink.cmp will use `label` when omitting both `insertText` and `textEdit`
+        insertText = symbol,
+        -- May be Snippet or PlainText
+        insertTextFormat = vim.lsp.protocol.InsertTextFormat.PlainText,
+      }
+      table.insert(computed, item)
+    end
   end
   return computed
 end
@@ -76,7 +81,31 @@ function source:enabled()
 end
 
 -- (Optional) Non-alphanumeric characters that trigger the source
-function source:get_trigger_characters() return { [[\]] } end
+function source:get_trigger_characters()
+  return {
+    "'",
+    ' ',
+    '!',
+    '"',
+    '(',
+    ')',
+    '*',
+    '+',
+    '-',
+    '.',
+    '<',
+    '=',
+    '>',
+    '^',
+    '_',
+    '`',
+    '{',
+    '|',
+    '}',
+    '~',
+    [[\]],
+  }
+end
 
 function source:get_completions(context, callback)
   -- ctx (context) contains the current keyword, cursor position, bufnr, etc.
