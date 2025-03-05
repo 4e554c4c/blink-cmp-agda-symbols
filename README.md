@@ -1,4 +1,4 @@
-# cmp-agda-symbols
+# blink-cmp-agda-symbols
 A [blink.nvim](https://github.com/Saghen/blink.cmp/tree/main) source for agda symbols 
 
 # Install
