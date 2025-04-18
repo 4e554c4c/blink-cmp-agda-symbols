@@ -24,7 +24,7 @@ local function compute_symbols(symbols)
         label = prefix_completion .. ' ' .. symbol,
         -- (Optional) Item kind, where `Function` and `Method` will receive
         -- auto brackets automatically
-        kind = require('blink.cmp.types').CompletionItemKind.Snippet,
+        kind = require('blink.cmp.types').CompletionItemKind.Text,
 
         -- (Optional) Text to fuzzy match against
         filterText = prefix_completion,
@@ -179,9 +179,10 @@ function source:resolve(item, callback)
 end
 
 -- Called immediately after applying the item's textEdit/insertText
-function source:execute(ctx, item, callback)
-  -- Note that the properties on `ctx` will be out of date by this point,
-  -- so you may want to call the `ctx.get_*()` functions to get up-to-date values
+function source:execute(ctx, item, callback, default_implementation)
+  -- By default, your source must handle the execution of the item itself,
+  -- but you may use the default implementation at any time
+  default_implementation()
 
   -- The callback _MUST_ be called once
   callback()
