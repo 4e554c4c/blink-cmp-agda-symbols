@@ -53,6 +53,66 @@ local function compute_symbols(symbols)
   end
   return computed
 end
+
+-- This and the following function are Copyright © 2020 Julian Berman, and
+-- licensed under the MIT license.
+-- See project and license here: https://github.com/Julian/lean.nvim
+
+---Retrieve the table of abbreviations that would produce the given symbol.
+---
+---Allows for trailing junk. E.g. `λean` will produce information about `λ`.
+---
+---The result is a table keyed by the length of the prefix match, and
+---whose value is sorted such that shorter abbreviation suggestions are
+---first.
+function source:reverse_lookup(symbol_plus_unknown)
+  local reverse = {}
+  for _, item in ipairs(self.symbols) do
+    local symbol = item.insertText
+    if vim.startswith(symbol_plus_unknown, symbol) then
+      reverse[#symbol] = reverse[#symbol] or {}
+      table.insert(reverse[#symbol], item.sortText)
+    end
+  end
+  for _, value in pairs(reverse) do
+    table.sort(value, function(a, b)
+      return #a < #b or #a == #b and a < b
+    end)
+  end
+  return reverse
+end
+
+---Show a preview window with the reverse-lookup of the current character.
+function source:show_reverse_lookup()
+  local col = vim.api.nvim_win_get_cursor(0)[2] + 1
+  local char = vim.api.nvim_get_current_line():sub(col)
+  local results = self:reverse_lookup(char)
+  local lines
+  if vim.tbl_isempty(results) then
+    lines = {
+      string.format('No abbreviation found for %q.', char),
+      '',
+      'Add one by modifying your invocation of:',
+      " agda_symbols = { opts = { extra = { ... } } }",
+    }
+  else
+    lines = {}
+    for i = #char, 1, -1 do
+      if results[i] ~= nil then
+        table.insert(lines, string.format('Type %s with:', char:sub(1, i)))
+        for _, each in ipairs(results[i]) do
+          table.insert(lines, '  ' .. each)
+        end
+      end
+    end
+  end
+  vim.lsp.util.open_floating_preview(
+    lines,
+    'markdown',
+    { focs_id = 'agda_symbols_help', border = 'rounded' }
+  )
+end
+
 -- `opts` table comes from `sources.providers.your_provider.opts`
 -- You may also accept a second argument `config`, to get the full
 -- `sources.providers.your_provider` table
@@ -71,6 +131,10 @@ function source.new(opts)
   self.opts = opts
   symbols = vim.tbl_extend('force', symbols, opts.extra or {});
   self.symbols = compute_symbols(symbols)
+
+  -- we also want to create a command
+  vim.api.nvim_create_user_command('AgdaSymbolsReverseLookup', function() self:show_reverse_lookup() end, {})
+
   return self
 end
 
