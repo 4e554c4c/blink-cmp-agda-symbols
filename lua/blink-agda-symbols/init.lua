@@ -148,6 +148,7 @@ end
 function source:get_trigger_characters()
   return {
     "'",
+    ":",
     ' ',
     '!',
     '"',
